@@ -1,0 +1,59 @@
+name: Generate Installable Plugin and Upload as Release Asset
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+
+      - name: Install Composer dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader
+
+      - name: Create custom plugin ZIP
+        env:
+          PLUGIN_SLUG: ${{ github.event.repository.name }}
+        run: |
+          ZIP_FILE="$PLUGIN_SLUG.zip"
+          TEMP_DIR=$(mktemp -d)
+          cp -r . "$TEMP_DIR/$PLUGIN_SLUG"
+          rm -rf "$TEMP_DIR/$PLUGIN_SLUG/.git"
+          rm -rf "$TEMP_DIR/$PLUGIN_SLUG/.github"
+          rm -rf "$TEMP_DIR/$PLUGIN_SLUG/.gitignore"
+          rm -f "$TEMP_DIR/$PLUGIN_SLUG/composer.json"
+          rm -f "$TEMP_DIR/$PLUGIN_SLUG/composer.lock"
+          if [ ! -d "$TEMP_DIR/$PLUGIN_SLUG/vendor" ]; then
+            echo "✗ ERROR: vendor directory not found in $TEMP_DIR/$PLUGIN_SLUG"
+            exit 1
+          fi
+          echo "✓ Vendor directory confirmed in build"
+          cd "$TEMP_DIR"
+          zip -r "$OLDPWD/$ZIP_FILE" "$PLUGIN_SLUG"
+          cd "$OLDPWD"
+          if [ -f "$ZIP_FILE" ]; then
+            echo "✓ Created $ZIP_FILE"
+            ls -lh "$ZIP_FILE"
+          else
+            echo "✗ Failed to create $ZIP_FILE"
+            exit 1
+          fi
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./${{ github.event.repository.name }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

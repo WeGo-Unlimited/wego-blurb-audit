@@ -1,0 +1,15 @@
+{
+  "name": "pglewis/wego-blurb-audit",
+  "description": "Audit and manage blurbs in WordPress posts/pages",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/pglewis/wego-plugin-updater"
+    }
+  ],
+  "require": {
+    "pglewis/wego-plugin-updater": "^1.0"
+  }
+}
