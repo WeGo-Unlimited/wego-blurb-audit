@@ -35,61 +35,18 @@ class WeGo_Blurb_Audit_List_Table extends WP_List_Table {
 		];
 	}
 
-	/**
-	 * Extract link information from HTML content
-	 */
-	private function extract_link_from_html( $html ) {
-		if ( empty( $html ) ) {
-			return [ 'text' => '', 'href' => '' ];
+	public function get_sortable_columns() {
+		if ( 'missing' === $this->blurb_filter ) {
+			return [];
 		}
 
-		// Suppress libxml errors for malformed HTML
-		libxml_use_internal_errors( true );
-
-		$dom = new DOMDocument();
-		// Wrap the HTML fragment in a complete document structure
-		$wrapped_html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' . $html . '</body></html>';
-		$dom->loadHTML( $wrapped_html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
-
-		$links = $dom->getElementsByTagName( 'a' );
-		if ( $links->length > 0 ) {
-			$first_link = $links->item( 0 );
-			return [
-				'text' => trim( $first_link->textContent ),
-				'href' => $this->make_relative_url( $first_link->getAttribute( 'href' ) ),
-			];
-		}
-
-		// Reset libxml errors
-		libxml_clear_errors();
-		return [ 'text' => '', 'href' => '' ];
-	}
-
-	/**
-	 * Convert URLs to relative paths for cleaner display
-	 */
-	private function make_relative_url( $url ) {
-		if ( empty( $url ) ) {
-			return '';
-		}
-
-		$parsed_url = parse_url( $url );
-
-		// If no host, it's already relative
-		if ( ! isset( $parsed_url['host'] ) ) {
-			return $url;
-		}
-
-		// Extract just the path portion
-		$path = $parsed_url['path'] ?? '/';
-		if ( isset( $parsed_url['query'] ) ) {
-			$path .= '?' . $parsed_url['query'];
-		}
-		if ( isset( $parsed_url['fragment'] ) ) {
-			$path .= '#' . $parsed_url['fragment'];
-		}
-
-		return $path;
+		return [
+			'url'         => [ 'url', false ],
+			'seo_title'   => [ 'seo_title', false ],
+			'seo_blurb'   => [ 'seo_blurb', false ],
+			'link_text'   => [ 'link_text', false ],
+			'link_target' => [ 'link_target', false ],
+		];
 	}
 
 	public function column_default( $item, $column_name ) {
@@ -101,53 +58,15 @@ class WeGo_Blurb_Audit_List_Table extends WP_List_Table {
 		$per_page = get_user_option( 'blurb_audit_per_page' ) ?: 20;
 		$current_page = $this->get_pagenum();
 
-		// Set up meta_query based on filter
-		if ( 'missing' === $this->blurb_filter ) {
-			$meta_query = [
-				'relation' => 'OR',
-				[
-					'key'     => 'seo_blurb',
-					'compare' => 'NOT EXISTS',
-				],
-				[
-					'key'     => 'seo_blurb',
-					'value'   => '',
-					'compare' => '=',
-				],
-			];
-		} else {
-			$meta_query = [
-				[
-					'key'     => 'seo_blurb',
-					'value'   => '',
-					'compare' => '!=',
-				],
-			];
-		}
+		// Get sort parameters
+		$orderby = isset( $_GET['orderby'] ) ? sanitize_text_field( wp_unslash( $_GET['orderby'] ) ) : '';
+		$order = isset( $_GET['order'] ) ? sanitize_text_field( wp_unslash( $_GET['order'] ) ) : 'asc';
+		$order = strtolower( $order ) === 'desc' ? 'desc' : 'asc';
 
-		// First get the total count
-		$count_args = [
-			'post_type'      => [ 'page', 'post' ],
-			'posts_per_page' => -1,
-			'meta_query'     => $meta_query,
-			'post_status'    => 'publish',
-			'fields'         => 'ids', // Only get IDs for counting
-		];
-		$count_query = new WP_Query( $count_args );
-		$total_items = $count_query->found_posts;
-
-		// Now get the paginated results
-		$args = [
-			'post_type'      => [ 'page', 'post' ],
-			'posts_per_page' => $per_page,
-			'paged'          => $current_page,
-			'meta_query'     => $meta_query,
-			'post_status'    => 'publish',
-			'orderby'        => 'menu_order',
-			'order'          => 'ASC',
-		];
+		// Fetch all posts (no pagination in query)
+		$args = WeGo_Blurb_Audit::get_audit_query_args( $this->blurb_filter );
 		$query = new WP_Query( $args );
-		$this->items = [];
+		$all_items = [];
 
 		if ( $query->have_posts() ) {
 			while ( $query->have_posts() ) {
@@ -158,9 +77,9 @@ class WeGo_Blurb_Audit_List_Table extends WP_List_Table {
 				if ( 'missing' === $this->blurb_filter ) {
 					// Only show if seo_blurb is truly empty (not just missing meta key)
 					if ( empty( $seo_blurb ) ) {
-						$this->items[] = [
+						$all_items[] = [
 							'post_id'     => get_the_ID(),
-							'url'         => $this->make_relative_url( get_permalink() ),
+							'url'         => WeGo_Blurb_Audit::make_relative_url( get_permalink() ),
 							'title'       => get_the_title(),
 							'seo_title'   => $seo_title ?: '',
 							'seo_blurb'   => '',
@@ -170,21 +89,41 @@ class WeGo_Blurb_Audit_List_Table extends WP_List_Table {
 					}
 				} else {
 					if ( $seo_blurb ) {
-						$link_data = $this->extract_link_from_html( $seo_blurb );
-						$this->items[] = [
+						$link_data = WeGo_Blurb_Audit::extract_link_from_html( $seo_blurb );
+						$all_items[] = [
 							'post_id'     => get_the_ID(),
-							'url'         => $this->make_relative_url( get_permalink() ),
+							'url'         => WeGo_Blurb_Audit::make_relative_url( get_permalink() ),
 							'title'       => get_the_title(),
 							'seo_title'   => $seo_title ?: '',
 							'seo_blurb'   => $seo_blurb,
 							'link_text'   => $link_data['text'] ?: 'No link found',
-							'link_target' => $link_data['href'] ?: '',
+							'link_target' => WeGo_Blurb_Audit::make_relative_url( $link_data['href'] ),
 						];
 					}
 				}
 			}
 		}
 		wp_reset_postdata();
+
+		// Sort if orderby is specified
+		if ( ! empty( $orderby ) && in_array( $orderby, [ 'url', 'seo_title', 'seo_blurb', 'link_text', 'link_target' ], true ) ) {
+			usort( $all_items, function( $a, $b ) use ( $orderby, $order ) {
+				$val_a = $a[ $orderby ];
+				$val_b = $b[ $orderby ];
+
+				// Case-insensitive string comparison
+				$result = strcasecmp( $val_a, $val_b );
+
+				return $order === 'desc' ? -$result : $result;
+			} );
+		}
+
+		// Get total count
+		$total_items = count( $all_items );
+
+		// Slice for pagination
+		$offset = ( $current_page - 1 ) * $per_page;
+		$this->items = array_slice( $all_items, $offset, $per_page );
 
 		// Set pagination
 		$this->set_pagination_args( [
@@ -193,7 +132,7 @@ class WeGo_Blurb_Audit_List_Table extends WP_List_Table {
 			'total_pages' => ceil( $total_items / $per_page ),
 		] );
 
-		$this->_column_headers = [ $this->get_columns(), [], [] ];
+		$this->_column_headers = [ $this->get_columns(), [], $this->get_sortable_columns() ];
 	}
 
 	public function column_url( $item ) {

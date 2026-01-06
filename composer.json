@@ -3,6 +3,11 @@
   "description": "Audit and manage blurbs in WordPress posts/pages",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
+  "config": {
+    "platform": {
+      "php": "7.4.0"
+    }
+  },
   "repositories": [
     {
       "type": "vcs",
@@ -10,6 +15,7 @@
     }
   ],
   "require": {
-    "pglewis/wego-plugin-updater": "^1.0"
+    "pglewis/wego-plugin-updater": "^1.0",
+    "phpoffice/phpspreadsheet": "^1.0"
   }
 }
