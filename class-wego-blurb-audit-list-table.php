@@ -111,6 +111,10 @@ class WeGo_Blurb_Audit_List_Table extends WP_List_Table {
 				$val_a = $a[ $orderby ];
 				$val_b = $b[ $orderby ];
 
+				// Strip HTML tags and trim whitespace for accurate sorting
+				$val_a = trim( wp_strip_all_tags( $val_a ) );
+				$val_b = trim( wp_strip_all_tags( $val_b ) );
+
 				// Case-insensitive string comparison
 				$result = strcasecmp( $val_a, $val_b );
 

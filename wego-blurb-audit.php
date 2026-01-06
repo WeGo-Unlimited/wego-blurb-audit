@@ -2,7 +2,7 @@
 /*
 Plugin Name: WeGo Blurb Audit
 Description: Audit and manage blurbs in WordPress posts and pages
-Version: 1.0.0
+Version: 1.0.1
 Requires at least: 6.5
 Requires PHP: 7.4
 Author: WeGo Unlimited
@@ -255,6 +255,10 @@ class WeGo_Blurb_Audit {
 			usort( $all_items, function( $a, $b ) use ( $orderby, $order ) {
 				$val_a = $a[ $orderby ];
 				$val_b = $b[ $orderby ];
+
+				// Strip HTML tags and trim whitespace for accurate sorting
+				$val_a = trim( wp_strip_all_tags( $val_a ) );
+				$val_b = trim( wp_strip_all_tags( $val_b ) );
 
 				// Case-insensitive string comparison
 				$result = strcasecmp( $val_a, $val_b );
