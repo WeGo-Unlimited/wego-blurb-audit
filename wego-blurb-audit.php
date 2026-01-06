@@ -2,7 +2,7 @@
 /*
 Plugin Name: WeGo Blurb Audit
 Description: Audit and manage blurbs in WordPress posts and pages
-Version: 0.0.2
+Version: 0.0.3
 Requires at least: 6.5
 Requires PHP: 7.4
 Author: WeGo Unlimited
@@ -161,8 +161,11 @@ add_action( 'admin_init', function() {
 
 				// Suppress libxml errors for malformed HTML
 				libxml_use_internal_errors( true );
+
 				$dom = new DOMDocument();
-				$dom->loadHTML( mb_convert_encoding( $html, 'HTML-ENTITIES', 'UTF-8' ), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
+				// Wrap the HTML fragment in a complete document structure
+				$wrapped_html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' . $html . '</body></html>';
+				$dom->loadHTML( $wrapped_html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
 
 				$links = $dom->getElementsByTagName( 'a' );
 				if ( $links->length > 0 ) {
@@ -173,6 +176,8 @@ add_action( 'admin_init', function() {
 					];
 				}
 
+				// Reset libxml errors
+				libxml_clear_errors();
 				return [ 'text' => '', 'href' => '' ];
 			}
 
