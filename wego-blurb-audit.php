@@ -2,7 +2,7 @@
 /*
 Plugin Name: WeGo Blurb Audit
 Description: Audit and manage blurbs in WordPress posts and pages
-Version: 0.0.1
+Version: 0.0.2
 Requires at least: 6.5
 Requires PHP: 7.4
 Author: WeGo Unlimited
@@ -222,7 +222,7 @@ add_action( 'admin_init', function() {
 							'compare' => 'EXISTS',
 						],
 					],
-					'post_status'    => [ 'publish', 'private', 'draft' ],
+					'post_status'    => 'publish',
 					'fields'         => 'ids', // Only get IDs for counting
 				];
 				$count_query = new WP_Query( $count_args );
@@ -239,7 +239,7 @@ add_action( 'admin_init', function() {
 							'compare' => 'EXISTS',
 						],
 					],
-					'post_status'    => [ 'publish', 'private', 'draft' ],
+					'post_status'    => 'publish',
 					'orderby'        => 'menu_order',
 					'order'          => 'ASC',
 				];
