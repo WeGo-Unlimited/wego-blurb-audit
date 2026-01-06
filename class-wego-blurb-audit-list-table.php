@@ -104,16 +104,23 @@ class WeGo_Blurb_Audit_List_Table extends WP_List_Table {
 		// Set up meta_query based on filter
 		if ( 'missing' === $this->blurb_filter ) {
 			$meta_query = [
+				'relation' => 'OR',
 				[
 					'key'     => 'seo_blurb',
 					'compare' => 'NOT EXISTS',
+				],
+				[
+					'key'     => 'seo_blurb',
+					'value'   => '',
+					'compare' => '=',
 				],
 			];
 		} else {
 			$meta_query = [
 				[
 					'key'     => 'seo_blurb',
-					'compare' => 'EXISTS',
+					'value'   => '',
+					'compare' => '!=',
 				],
 			];
 		}

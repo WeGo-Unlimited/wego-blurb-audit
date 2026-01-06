@@ -2,7 +2,7 @@
 /*
 Plugin Name: WeGo Blurb Audit
 Description: Audit and manage blurbs in WordPress posts and pages
-Version: 0.0.4
+Version: 0.0.5
 Requires at least: 6.5
 Requires PHP: 7.4
 Author: WeGo Unlimited
